@@ -1,3 +1,4 @@
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class Lista<E> {
@@ -87,6 +88,68 @@ public class Lista<E> {
 		}
 		
 		return (null);
+	}
+
+	public int tamanho() {
+
+		return (this.tamanho);
+	}
+
+	public E obter(int posicao) {
+
+		if ((posicao < 0) || (posicao >= this.tamanho))
+			throw new IndexOutOfBoundsException("Não foi possível obter o item da lista: "
+					+ "a posição informada é inválida!");
+
+		Celula<E> atual = this.primeiro.getProximo();
+		for (int i = 0; i < posicao; i++)
+			atual = atual.getProximo();
+
+		return (atual.getItem());
+	}
+
+	/**
+	 * Calcula o valor médio de um atributo numérico dos primeiros elementos da lista.
+	 * @param extrator Função que extrai o valor numérico de cada elemento
+	 * @param quantidade Quantidade de primeiros elementos considerados
+	 * @return A média dos valores extraídos (0 se não houver elementos considerados)
+	 */
+	public double calcularValorMedio(Function<E, Double> extrator, int quantidade) {
+
+		Celula<E> atual = this.primeiro.getProximo();
+		double soma = 0d;
+		int contados = 0;
+
+		while (atual != null && contados < quantidade) {
+			soma += extrator.apply(atual.getItem());
+			contados++;
+			atual = atual.getProximo();
+		}
+
+		return (contados == 0) ? 0d : soma / contados;
+	}
+
+	/**
+	 * Cria uma nova lista com os elementos, entre os primeiros da lista, que satisfazem a condição.
+	 * @param condicional Teste que decide se o elemento entra na nova lista
+	 * @param quantidade Quantidade de primeiros elementos submetidos ao teste
+	 * @return Nova lista com os elementos que satisfazem a condição
+	 */
+	public Lista<E> filtrar(Predicate<E> condicional, int quantidade) {
+
+		Lista<E> filtrada = new Lista<>();
+		Celula<E> atual = this.primeiro.getProximo();
+		int testados = 0;
+
+		while (atual != null && testados < quantidade) {
+			if (condicional.test(atual.getItem()))
+				filtrada.inserir(atual.getItem(), filtrada.tamanho);
+
+			testados++;
+			atual = atual.getProximo();
+		}
+
+		return filtrada;
 	}
 
 	public static void main(String[] args) {

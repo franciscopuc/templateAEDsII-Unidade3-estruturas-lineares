@@ -8,6 +8,8 @@ public class Pedido {
 	
 	/** Vetor para armazenar os produtos do pedido */
 	private Produto[] produtos;
+
+	static Lista<Pedido> pedidosCadastrados = new Lista<>();
 	
 	public Produto[] getProdutos() {
 		return produtos;
@@ -21,12 +23,14 @@ public class Pedido {
 
 	/** Construtor do Pedido. Deve criar o vetor e armazenar a data atual do sistema na data do pedido */
 	public Pedido() {
-		produtos = new Produto[MAX_PRODUTOS];
+		produtos = new Lista<>();
 		this.dataPedido = LocalDate.now();
 		this.quantProdutos = 0;
 	}
 
-	
+	public boolean contemProduto(Produto produto) {
+		return produtos.localizar(p -> p.equals(produto)) != null;
+	}	
 
     /**
      * Inclui um produto neste pedido e aumenta a quantidade de produtos armazenados.
@@ -35,7 +39,7 @@ public class Pedido {
      */
 	public int incluirProduto(Produto novo) {
 		if(quantProdutos < MAX_PRODUTOS && novo != null) {
-			produtos[quantProdutos++] = novo;
+			produtos.inserir(novo, quantProdutos++);
 		} else {
 			System.out.println("Produto nulo ou excedeu a quantidade de produtos permitida.");
 		}
@@ -47,11 +51,7 @@ public class Pedido {
      * @return Valor a ser pago pelo pedido (double)
      */
 	public double valorFinal() {
-		double total = 0d;
-		for (int i = 0; i < quantProdutos; i++) {
-			total += produtos[i].valorDeVenda();
-		}
-		return total;
+		return produtos.calcularValorMedio(p -> p.valorDeVenda(), quantProdutos) * quantProdutos;
 	}
 
     /**
@@ -63,7 +63,7 @@ public class Pedido {
 		DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 		StringBuilder retorno = new StringBuilder("Pedido na data "+formato.format(dataPedido)+"\n");
 		for (int i = 0; i < quantProdutos; i++) {
-			retorno.append(produtos[i].toString()+"\n");
+			retorno.append(produtos.obter(i).toString()+"\n");
 		}
 		retorno.append(String.format("Valor a pagar: R$ %.2f", valorFinal()));
 		return retorno.toString();

@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -26,10 +25,10 @@ public class Comercio {
     /** Quantidade máxima de pedidos que podem ser armazenados no vetor */
     static final int MAX_PEDIDOS = 10;
     
-    /** Vetor de pedidos cadastrados */
-    static Pedido[] pedidosCadastrados;
-    
-    /** Quantidade de pedidos cadastrados atualmente no vetor */
+    /** Pilha com os produtos incluídos nos pedidos mais recentes */
+    static Pilha<Produto> produtosRecentes;
+
+    /** Quantidade de pedidos cadastrados atualmente na fila */
     static int quantPedidos;
     
     /** Gera um efeito de pausa na CLI. Espera por um enter para continuar */
@@ -55,6 +54,10 @@ public class Comercio {
         System.out.println("3 - Cadastrar novo produto");
         System.out.println("4 - Iniciar novo pedido");
         System.out.println("5 - Fechar pedido");
+        System.out.println("6 - Listar K produtos mais recentemente vendidos");
+        System.out.println("7 - Exibir o valor total médio dos N primeiros pedidos");
+        System.out.println("8 - Exibir os primeiros pedidos com valor total acima de um determinado valor");
+        System.out.println("9 - Exibir os primeiros pedidos que apresentam um determinado produto");
         System.out.println("0 - Sair");
         System.out.print("Digite sua opção: ");
         return Integer.parseInt(teclado.nextLine());
@@ -234,12 +237,16 @@ public class Comercio {
     }
 
     /**
-     * Finaliza um pedido, momento no qual ele deve ser armazenado em um vetor de pedidos.
+     * Finaliza um pedido, enfileirando-o e empilhando seus produtos na pilha de recentes.
      * @param pedido O pedido que deve ser finalizado.
      */
     public static void finalizarPedido(Pedido pedido) {
         if(pedido != null && quantPedidos < MAX_PEDIDOS) {
-            pedidosCadastrados[quantPedidos++] = pedido;
+            Pedido.pedidosCadastrados.inserir(pedido, quantPedidos);
+            quantPedidos++;
+            Lista<Produto> produtosDoPedido = pedido.getProdutos();
+            for (int i = 0; i < produtosDoPedido.tamanho(); i++)
+                produtosRecentes.empilhar(produtosDoPedido.obter(i));
         } else {
             System.out.println("Pedido vazio ou excedeu a quantidade máxima de pedidos armazenados.");
         }
@@ -254,15 +261,54 @@ public class Comercio {
         try {
             FileWriter arquivoSaida = new FileWriter(nomeArquivo, Charset.forName("UTF-8"));
             arquivoSaida.append(quantPedidos + "\n");
-            for (int i = 0; i < pedidosCadastrados.length; i++) {
-                if(pedidosCadastrados[i] != null)
-                    arquivoSaida.append(pedidosCadastrados[i].resumo()+"\n");
-            }
+            for (int i = 0; i < quantPedidos; i++)
+                arquivoSaida.append(Pedido.pedidosCadastrados.obter(i).resumo()+"\n");
             arquivoSaida.close();    
             System.out.println("Arquivo "+nomeArquivo+" salvo.");
         } catch (IOException e) {
             System.out.println("Problemas no arquivo "+nomeArquivo+". Tente novamente");
         }  
+    }
+
+    /** Lista os K produtos mais recentemente incluídos em pedidos finalizados. */
+    public static void listarProdutosPedidosRecentemente(int K) {
+        cabecalho();
+        Pilha<Produto> recentes = produtosRecentes.subPilha(K);
+        if(recentes.vazia())
+            System.out.println("Nenhum produto pedido recentemente.");
+        else {
+            System.out.println("\nPRODUTOS PEDIDOS RECENTEMENTE:");
+            recentes.imprimir();
+        }
+    }
+
+    /** Imprime o resumo de cada pedido de uma lista de pedidos */
+    static void imprimirPedidos(Lista<Pedido> pedidos) {
+        if(pedidos.vazia())
+            System.out.println("Nenhum pedido encontrado.");
+        else
+            for (int i = 0; i < pedidos.tamanho(); i++)
+                System.out.println(pedidos.obter(i).resumo());
+    }
+
+    /** Exibe o valor total médio dos N primeiros pedidos cadastrados. */
+    public static void exibirValorMedioPedidos(int n) {
+        cabecalho();
+        double media = Pedido.pedidosCadastrados.calcularValorMedio(p -> p.valorFinal(), n);
+        System.out.println(String.format("Valor total médio dos %d primeiros pedidos: R$ %.2f",
+                Math.min(n, quantPedidos), media));
+    }
+
+    /** Exibe os primeiros N pedidos cujo valor total é superior ao valor informado. */
+    public static void exibirPedidosAcimaDeValor(double valor, int n) {
+        cabecalho();
+        imprimirPedidos(Pedido.pedidosCadastrados.filtrar(p -> p.valorFinal() > valor, n));
+    }
+
+    /** Exibe, entre os primeiros N pedidos, aqueles que contêm o produto informado. */
+    public static void exibirPedidosComProduto(Produto produto, int n) {
+        cabecalho();
+        imprimirPedidos(Pedido.pedidosCadastrados.filtrar(p -> p.contemProduto(produto), n));
     }
 
     public static void main(String[] args) {
@@ -271,7 +317,7 @@ public class Comercio {
         nomeArquivoDados = "produtos_10000.txt";
         String nomeArquivoPedidos = "dadosPedidos.csv";
         produtosCadastrados = lerProdutos(nomeArquivoDados);
-        pedidosCadastrados = new Pedido[MAX_PEDIDOS];
+        produtosRecentes = new Pilha<>();
         Pedido pedido = null;
         
         int opcao = -1;
@@ -284,6 +330,26 @@ public class Comercio {
                 case 3 -> cadastrarProduto();
                 case 4 -> pedido = iniciarPedido();
                 case 5 -> finalizarPedido(pedido);
+                case 6 -> {
+                    System.out.print("Quantos produtos (K)? ");
+                    listarProdutosPedidosRecentemente(Integer.parseInt(teclado.nextLine()));
+                }
+                case 7 -> {
+                    System.out.print("Quantos pedidos (N)? ");
+                    exibirValorMedioPedidos(Integer.parseInt(teclado.nextLine()));
+                }
+                case 8 -> {
+                    System.out.print("Valor mínimo: R$ ");
+                    double valor = Double.parseDouble(teclado.nextLine());
+                    System.out.print("Quantos primeiros pedidos analisar (N)? ");
+                    exibirPedidosAcimaDeValor(valor, Integer.parseInt(teclado.nextLine()));
+                }
+                case 9 -> {
+                    System.out.print("Descrição do produto: ");
+                    Produto buscado = new ProdutoNaoPerecivel(teclado.nextLine(), 1, 0);
+                    System.out.print("Quantos primeiros pedidos analisar (N)? ");
+                    exibirPedidosComProduto(buscado, Integer.parseInt(teclado.nextLine()));
+                }
             }
             pausa();
         }while(opcao != 0);       
