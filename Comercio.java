@@ -240,17 +240,24 @@ public class Comercio {
      * Finaliza um pedido, enfileirando-o e empilhando seus produtos na pilha de recentes.
      * @param pedido O pedido que deve ser finalizado.
      */
-    public static void finalizarPedido(Pedido pedido) {
-        if(pedido != null && quantPedidos < MAX_PEDIDOS) {
-            Pedido.pedidosCadastrados.inserir(pedido, quantPedidos);
-            quantPedidos++;
-            Lista<Produto> produtosDoPedido = pedido.getProdutos();
-            for (int i = 0; i < produtosDoPedido.tamanho(); i++)
-                produtosRecentes.empilhar(produtosDoPedido.obter(i));
-        } else {
-            System.out.println("Pedido vazio ou excedeu a quantidade máxima de pedidos armazenados.");
+
+        public static void finalizarPedido(Pedido pedido) {
+            if (pedido != null && quantPedidos < MAX_PEDIDOS) {
+                Pedido.pedidosCadastrados.inserir(pedido, quantPedidos);
+                quantPedidos++;
+
+                Lista<Produto> produtosDoPedido = pedido.getProdutos();
+
+                for (int i = 0; i < produtosDoPedido.tamanho(); i++) {
+                    produtosRecentes.empilhar(produtosDoPedido.obter(i));
+                }
+            } else {
+                System.out.println(
+                    "Pedido vazio ou excedeu a quantidade máxima de pedidos armazenados."
+                );
+            }
         }
-    }
+
 
      /**
      * Salva os dados dos pedidos cadastrados no arquivo csv informado. Sobrescreve todo o conteúdo do arquivo, se ele já existir.
